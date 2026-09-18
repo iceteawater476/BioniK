@@ -256,10 +256,18 @@
   #screen-reader.chrome-hidden .reader-topbar{ opacity:0; transform:translateY(-8px); pointer-events:none; }
   #screen-reader.chrome-hidden .reader-bottombar{ opacity:0; transform:translateY(8px); pointer-events:none; }
 
-  .loading-overlay{ position:absolute; inset:0; background:var(--bg); z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
+  .loading-overlay{ position:absolute; inset:0; background:var(--bg); z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:0 40px; }
+  .loading-progress-track{ width:min(220px, 60vw); height:5px; border-radius:3px; background:var(--bg-sunken); overflow:hidden; }
+  .loading-progress-fill{ height:100%; width:0%; background:var(--accent); border-radius:3px; transition:width .2s ease; }
   .spinner{ width:34px; height:34px; border-radius:50%; border:3px solid var(--border); border-top-color:var(--accent); animation:spin 0.8s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg);} }
   #loading-text{ font-size:.85rem; color:var(--text-dim); }
+  .loading-error{ display:none; flex-direction:column; align-items:center; gap:12px; text-align:center; max-width:340px; }
+  .loading-overlay.is-error .loading-busy{ display:none; }
+  .loading-overlay.is-error .loading-error{ display:flex; }
+  .loading-error .err-icon{ font-size:2rem; }
+  .loading-error .err-msg{ font-size:.88rem; color:var(--text-dim); line-height:1.5; }
+  .loading-error .err-actions{ display:flex; gap:10px; margin-top:4px; }
 
   /* ---------- toast / confetti ---------- */
   #toast-container{ position:fixed; left:0; right:0; bottom: calc(90px + env(safe-area-inset-bottom)); z-index:200; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
@@ -283,6 +291,7 @@
 <body>
 
 <div id="app-shell">
+  <div id="engine-banner" hidden style="background:#AE4A3C; color:#fff; padding:12px 18px; font-size:.8rem; line-height:1.4;"></div>
   <header id="topbar">
     <h1 id="topbar-title">Bionic Shelf</h1>
     <div class="tag" id="topbar-tag">your books, read faster</div>
@@ -409,9 +418,21 @@
     <div id="reader-progress-label">Page 1 of 1</div>
   </div>
   <div class="loading-overlay" id="loading-overlay" hidden>
-    <div class="spinner"></div>
-    <div id="loading-text">Opening book…</div>
-    <button class="btn-ghost" id="loading-cancel" style="margin-top:6px;">Cancel</button>
+    <div class="loading-busy" id="loading-busy" style="display:flex; flex-direction:column; align-items:center; gap:14px;">
+      <div class="spinner"></div>
+      <div id="loading-text">Opening book…</div>
+      <div class="loading-progress-track"><div class="loading-progress-fill" id="loading-progress-fill"></div></div>
+      <div id="loading-progress-pct" style="font-size:.7rem; color:var(--text-dim);"></div>
+      <button class="btn-ghost" id="loading-cancel" style="margin-top:6px;">Cancel</button>
+    </div>
+    <div class="loading-error" id="loading-error">
+      <div class="err-icon">⚠️</div>
+      <div class="err-msg" id="loading-error-msg"></div>
+      <div class="err-actions">
+        <button class="btn-ghost" id="loading-error-back">Back to shelf</button>
+        <button class="btn-primary" id="loading-error-retry">Try again</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -481,7 +502,6 @@ function setupPdfWorker(){
     console.error("PDF worker setup failed; PDF parsing will fall back to the main thread.", err);
   }
 }
-setupPdfWorker();
 
 /* ============================= tiny helpers ============================= */
 function $(sel, root){ return (root||document).querySelector(sel); }
@@ -623,7 +643,7 @@ function normalizePath(path){
   }
   return out.join("/");
 }
-async function parseEpub(arrayBuffer){
+async function parseEpub(arrayBuffer, onProgress){
   const zip = await JSZip.loadAsync(arrayBuffer);
   const containerFile = zip.file("META-INF/container.xml");
   if(!containerFile) throw new Error("This doesn't look like a valid EPUB file.");
@@ -650,7 +670,9 @@ async function parseEpub(arrayBuffer){
   const spineIds = $all("spine > itemref", opfDoc).map(x=> x.getAttribute("idref"));
 
   const chapters = [];
-  for(const id of spineIds){
+  for(let ci=0; ci<spineIds.length; ci++){
+    const id = spineIds[ci];
+    if(onProgress) onProgress(ci/Math.max(1,spineIds.length), "Chapter "+(ci+1)+" of "+spineIds.length);
     const href = manifest[id];
     if(!href) continue;
     const fullPath = normalizePath(opfDir ? opfDir + "/" + href : href);
@@ -680,13 +702,43 @@ async function parseEpub(arrayBuffer){
     }
     if(paragraphs.length) chapters.push({ title: chTitle, paragraphs });
   }
+  if(onProgress) onProgress(1, "");
   if(chapters.length === 0) throw new Error("No readable chapters found in this EPUB.");
   return { title, author, chapters };
 }
 
 /* ============================= PDF parsing ============================= */
-async function parsePdf(arrayBuffer){
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+async function getPdfDocument(originalBuffer, onProgress){
+  // Stage 1: try the normal background-worker path (fast, doesn't block the UI thread).
+  try{
+    if(onProgress) onProgress(0, "Starting PDF engine…");
+    const attempt1 = originalBuffer.slice(0); // pdf.js may transfer/detach the buffer it's given
+    return await withTimeout(
+      pdfjsLib.getDocument({ data: attempt1 }).promise,
+      12000,
+      "worker-stage-timeout"
+    );
+  }catch(e){
+    console.warn("PDF worker didn't respond in time, retrying on the main thread:", e);
+  }
+  // Stage 2: the worker never responded — force pdf.js to run entirely on the main
+  // thread instead (slower, but has nothing left to silently fail on).
+  if(onProgress) onProgress(0, "Retrying without background worker…");
+  const realWorker = window.Worker;
+  try{
+    window.Worker = undefined; // makes pdf.js skip straight to its main-thread fallback
+    const attempt2 = originalBuffer.slice(0);
+    return await withTimeout(
+      pdfjsLib.getDocument({ data: attempt2 }).promise,
+      25000,
+      "The PDF engine couldn't start in this browser. Try a different browser (Chrome or Firefox usually work best), or a different device."
+    );
+  } finally {
+    window.Worker = realWorker;
+  }
+}
+async function parsePdf(arrayBuffer, onProgress){
+  const pdf = await getPdfDocument(arrayBuffer, onProgress);
   let title = "Untitled PDF", author = "";
   try{
     const meta = await pdf.getMetadata();
@@ -698,6 +750,7 @@ async function parsePdf(arrayBuffer){
 
   const paragraphs = [];
   for(let p=1; p<=pdf.numPages; p++){
+    if(onProgress) onProgress((p-1)/pdf.numPages, "Page "+p+" of "+pdf.numPages);
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
     const items = content.items.filter(it=> it.str && it.str.trim().length);
@@ -736,6 +789,7 @@ async function parsePdf(arrayBuffer){
     }
     if(buf.trim()) paragraphs.push({ text: buf.trim(), heading:false });
   }
+  if(onProgress) onProgress(1, "");
   if(paragraphs.length === 0) throw new Error("Couldn't find selectable text in this PDF (it may be scanned images).");
   return { title, author, chapters: [{ title:"", paragraphs }] };
 }
@@ -960,13 +1014,10 @@ $("#btn-edit").addEventListener("click", ()=>{
   renderLibrary();
 });
 
-const PARSE_TIMEOUT_MS = 45000;
-const TIMEOUT_MESSAGE = "This is taking too long to open. If you're previewing this inside Claude, that's often because the sandbox blocks a background script the PDF engine needs — it should work fine once this page is hosted on its own (e.g. GitHub Pages). Otherwise, try a smaller file or reload and try again.";
+const PARSE_TIMEOUT_MS = 90000;
+const TIMEOUT_MESSAGE = "This is taking too long to open. Try again — or try a smaller file, or a different browser.";
 
-$("#file-input").addEventListener("change", async (e)=>{
-  const file = e.target.files[0];
-  e.target.value = "";
-  if(!file) return;
+async function processFile(file){
   const isEpub = /\.epub$/i.test(file.name) || file.type === "application/epub+zip";
   const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
   if(!isEpub && !isPdf){
@@ -980,7 +1031,8 @@ $("#file-input").addEventListener("change", async (e)=>{
     // Parsing (JSZip / pdf.js) can transfer and detach the ArrayBuffer it's given,
     // so parse from one read and grab a fresh, untouched copy afterward for storage.
     const parseBuf = await file.arrayBuffer();
-    const parsePromise = type === "epub" ? parseEpub(parseBuf) : parsePdf(parseBuf);
+    const onProgress = (frac, detail)=> setLoadingProgress(frac, detail);
+    const parsePromise = type === "epub" ? parseEpub(parseBuf, onProgress) : parsePdf(parseBuf, onProgress);
     const parsed = await withTimeout(parsePromise, PARSE_TIMEOUT_MS, TIMEOUT_MESSAGE);
     if(myToken !== opToken) return; // cancelled while parsing
     const storeBuf = await file.arrayBuffer();
@@ -1001,19 +1053,52 @@ $("#file-input").addEventListener("change", async (e)=>{
   }catch(err){
     if(myToken !== opToken) return; // cancelled — don't surface a stale error
     console.error(err);
-    showLoading(false);
-    showToast(err && err.message ? err.message : "Couldn't open that file", "⚠️");
+    const msg = err && err.message ? err.message : "Couldn't open that file.";
+    showLoadingError(msg, ()=> processFile(file));
   }
+}
+$("#file-input").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+  processFile(file);
 });
 
 /* ============================= reader: open / parse cache ============================= */
 function showLoading(on, text){
+  $("#loading-overlay").classList.remove("is-error");
   $("#loading-overlay").hidden = !on;
   if(text) $("#loading-text").textContent = text;
+  if(on) setLoadingProgress(0, "");
 }
+function setLoadingProgress(frac, detail){
+  const pct = Math.round(clamp(frac,0,1)*100);
+  $("#loading-progress-fill").style.width = pct + "%";
+  $("#loading-progress-pct").textContent = detail || (pct + "%");
+}
+function showLoadingError(message, retryFn){
+  $("#loading-overlay").hidden = false;
+  $("#loading-overlay").classList.add("is-error");
+  $("#loading-error-msg").textContent = message;
+  $("#loading-error-retry").style.display = retryFn ? "" : "none";
+  $("#loading-error-retry").onclick = ()=>{
+    hideLoadingOverlay();
+    if(retryFn) retryFn();
+  };
+}
+function hideLoadingOverlay(){
+  $("#loading-overlay").hidden = true;
+  $("#loading-overlay").classList.remove("is-error");
+}
+$("#loading-error-back").addEventListener("click", ()=>{
+  opToken++; // invalidate anything still in flight
+  hideLoadingOverlay();
+  $("#screen-reader").classList.remove("active");
+  showTab("library");
+});
 $("#loading-cancel").addEventListener("click", ()=>{
   opToken++; // invalidates any in-flight parse/open so its result/error is ignored
-  showLoading(false);
+  hideLoadingOverlay();
   $("#screen-reader").classList.remove("active");
   showTab("library");
 });
@@ -1030,7 +1115,8 @@ async function openBook(id, preParsed, token){
       if(myToken !== opToken) return;
       if(!rec) throw new Error("Book not found.");
       meta = meta || { id, title:rec.title, author:rec.author, type:rec.type };
-      const parsePromise = rec.type === "epub" ? parseEpub(rec.fileData) : parsePdf(rec.fileData);
+      const onProgress = (frac, detail)=> setLoadingProgress(frac, detail);
+      const parsePromise = rec.type === "epub" ? parseEpub(rec.fileData, onProgress) : parsePdf(rec.fileData, onProgress);
       parsed = await withTimeout(parsePromise, PARSE_TIMEOUT_MS, TIMEOUT_MESSAGE);
     }
     if(myToken !== opToken) return; // cancelled while parsing
@@ -1050,9 +1136,8 @@ async function openBook(id, preParsed, token){
   }catch(err){
     if(myToken !== opToken) return; // cancelled — don't surface a stale error
     console.error(err);
-    showLoading(false);
-    showToast(err && err.message ? err.message : "Couldn't open that book", "⚠️");
-    closeReader();
+    const msg = err && err.message ? err.message : "Couldn't open that book.";
+    showLoadingError(msg, ()=> openBook(id));
   }
 }
 function renderReaderContent(){
@@ -1221,14 +1306,42 @@ $("#btn-reset").addEventListener("click", async ()=>{
 });
 
 /* ============================= boot ============================= */
+function showEngineBanner(msg){
+  const el = $("#engine-banner");
+  el.hidden = false;
+  el.textContent = msg;
+}
+// Surface literally any uncaught error or rejected promise, anywhere in the app,
+// instead of letting a failure happen silently while the UI just sits there.
+window.addEventListener("error", (e)=>{
+  console.error("Uncaught error:", e.error || e.message);
+  showEngineBanner("Something went wrong: " + (e.message || (e.error && e.error.message) || "unknown error") + ". Try reloading the page.");
+});
+window.addEventListener("unhandledrejection", (e)=>{
+  console.error("Unhandled promise rejection:", e.reason);
+  const msg = (e.reason && e.reason.message) ? e.reason.message : String(e.reason);
+  showEngineBanner("Something went wrong: " + msg + ". Try reloading the page.");
+});
+
 async function boot(){
   applyTheme();
   applySettingsUI();
+  // Confirm the bundled PDF/EPUB engine actually loaded and initialized — if either
+  // is missing, every book would hang forever with no visible cause, so check up front.
+  const missing = [];
+  if(typeof window.pdfjsLib === "undefined") missing.push("PDF engine (pdf.js)");
+  if(typeof window.JSZip === "undefined") missing.push("EPUB engine (JSZip)");
+  if(missing.length){
+    showEngineBanner("⚠️ " + missing.join(" and ") + " failed to load in this browser, so books can't be opened. Try a different browser (Chrome or Firefox work best), or reload this page.");
+  } else {
+    try{ setupPdfWorker(); }catch(e){ console.error("Worker setup threw:", e); }
+  }
   try{
     const recs = await dbGetAll();
     library = recs.map(r=> ({ id:r.id, title:r.title, author:r.author, type:r.type, addedAt:r.addedAt }));
   }catch(e){
     console.error("DB load failed", e);
+    showEngineBanner("⚠️ This browser blocked local storage, so your library can't be saved. Try a different browser, or check privacy/incognito settings.");
   }
   renderLibrary();
   renderStats();
