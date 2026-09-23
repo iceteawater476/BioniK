@@ -1177,6 +1177,15 @@ $("#reader-bionic-toggle").addEventListener("click", async ()=>{
 async function layoutPages(targetFraction){
   const viewport = $("#reader-viewport");
   const cols = $("#reader-columns");
+  // Google Fonts loads with display=swap: text first renders in a fallback
+  // font, then swaps to Lora once it downloads, which reflows line/column
+  // breaks. If we measure before that swap, the page math goes stale and
+  // pages drift out of alignment the moment the swap happens. Wait for the
+  // real font metrics (with a safety timeout, in case fonts.ready never
+  // settles) before doing any measurement.
+  if(document.fonts && document.fonts.ready){
+    try{ await withTimeout(document.fonts.ready, 2000, "fonts timeout"); }catch(e){}
+  }
   const vw = viewport.clientWidth || window.innerWidth;
   readerPageWidth = vw;
   cols.style.columnWidth = "calc(" + vw + "px - " + (2) + "*var(--r-margin))";
@@ -1273,6 +1282,20 @@ window.addEventListener("resize", ()=>{
     await layoutPages(frac);
   }, 250);
 });
+
+// Safety net: if a font finishes loading after our layoutPages() wait already
+// gave up (slow network hitting the timeout), re-measure once so pages don't
+// stay misaligned to a fallback-font layout for the rest of the session.
+if(document.fonts && document.fonts.addEventListener){
+  document.fonts.addEventListener("loadingdone", ()=>{
+    if(!$("#screen-reader").classList.contains("active")) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(async ()=>{
+      const frac = totalPages>1 ? currentPage/(totalPages-1) : 0;
+      await layoutPages(frac);
+    }, 100);
+  });
+}
 
 /* ============================= settings interactions ============================= */
 $all("#theme-segmented button").forEach(btn=>{
