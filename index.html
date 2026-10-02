@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Bionic Reader</title>
+<html lang="en"><head><meta charset="utf-8"><title>Bionic Reader (Copy)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
 :root{--bg:#fafaf7;--fg:#222;--mut:#777;--ac:#6c5ce7;--card:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -22,10 +22,17 @@ nav{display:flex;gap:10px;max-width:42rem;margin:0 auto;padding:0 20px 40px}nav 
 #set label{display:block;font-size:13px;color:var(--mut);margin:10px 0 2px}#set input[type=range]{width:100%}
 .pop{position:fixed;left:50%;bottom:20%;font-size:26px;pointer-events:none;animation:up 1.1s ease-out forwards;z-index:20}
 @keyframes up{to{transform:translate(var(--x),-60vh) rotate(var(--r));opacity:0}}
+article img,article canvas{max-width:100%;height:auto;display:block;margin:0 auto 1em}article table{display:block;overflow-x:auto;max-width:100%;border-collapse:collapse;margin-bottom:1em}article td,article th{border:1px solid var(--mut);padding:4px 8px}article h1,article h2,article h3{line-height:1.3}
+:root[data-theme=dark] canvas{filter:invert(1) hue-rotate(180deg)}
+#toc{display:none;position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 56px);background:var(--card);padding:8px;border-radius:16px;box-shadow:0 8px 30px #0005;z-index:9;width:min(300px,85vw);max-height:60vh;overflow:auto}#toc button{display:block;width:100%;text-align:left;background:none;color:var(--fg);font-weight:400;padding:8px}
+#toc #gg{width:auto;background:var(--ac);color:var(--bg);text-align:center;font-weight:600}
+#ttl{max-width:45vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl{background:var(--card);margin:0 auto 1em;overflow:hidden;box-shadow:0 2px 12px #0003}.tl span{position:absolute;white-space:pre;color:var(--fg);line-height:1;font-family:Georgia,serif}.tl b{font-weight:800}
 #toast{position:fixed;left:50%;top:40%;transform:translateX(-50%);background:var(--ac);color:var(--bg);padding:10px 20px;border-radius:30px;font-weight:700;display:none;z-index:20}
 </style></head><body>
-<header><b id="ttl">📖 Bionic</b><span id="xp"></span><button class="g" onclick="set.style.display=set.style.display=='block'?'none':'block'">Aa</button></header>
+<header><button class="g" onclick="tg(toc)">☰</button><b id="ttl">📖 Bionic</b><span id="xp"></span><button class="g" id="pgb" hidden>🖼</button><button class="g" onclick="tg(set)">Aa</button></header>
 <div id="bar"></div>
+<div id="toc"></div>
 <div id="set">
  <label><input type="checkbox" id="bio" checked> Bionic reading</label>
  <label>Bold amount</label><input type="range" id="str" min="0.2" max="0.7" step="0.05">
@@ -40,45 +47,80 @@ nav{display:flex;gap:10px;max-width:42rem;margin:0 auto;padding:0 20px 40px}nav 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-const $=s=>document.querySelector(s);
-let S={bio:1,str:.45,size:19,theme:''},P={xp:0,streak:0,last:''},D,cur=0,name,paras=[];
+const $=s=>document.querySelector(s),tg=e=>{const o=e.style.display=='block';toc.style.display=set.style.display='none';e.style.display=o?'none':'block'};
+let S={bio:1,str:.45,size:19,theme:'',vm:2},P={xp:0,streak:0,last:''},D,cur=0,name,paras=[];
 try{Object.assign(S,JSON.parse(localStorage.s||'{}'));Object.assign(P,JSON.parse(localStorage.p||'{}'))}catch(e){}
 const save=()=>{try{localStorage.s=JSON.stringify(S);localStorage.p=JSON.stringify(P)}catch(e){}};
 const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
 const bionic=(t,k)=>t.replace(/([\p{L}\p{N}]+)|([^\p{L}\p{N}]+)/gu,(m,w,o)=>w?`<b>${w.slice(0,Math.ceil(w.length*k))}</b>${w.slice(Math.ceil(w.length*k))}`:esc(o));
 console.assert(bionic('Hello, world',.5)==='<b>Hel</b>lo, <b>wor</b>ld','bionic broke');
 const th=t=>{S.theme=t;document.documentElement.dataset.theme=t;save()};
-if(S.theme)th(S.theme);
+th(S.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
 $('#bio').checked=!!S.bio;$('#str').value=S.str;$('#size').value=S.size;
 ['bio','str','size'].forEach(id=>$('#'+id).oninput=e=>{S[id]=id=='bio'?+e.target.checked:+e.target.value;save();draw()});
+$('#pgb').onclick=()=>{S.vm=(S.vm+1)%3;save();draw()};
 function hud(){const l=Math.floor(Math.sqrt(P.xp/50))+1;$('#xp').textContent=`Lv ${l} · ${P.xp} XP · 🔥${P.streak}`}hud();
-function draw(){const a=$('#t');a.style.fontSize=S.size+'px';
- a.innerHTML=paras.length?paras.map(p=>`<p>${S.bio?bionic(p,S.str):esc(p)}</p>`).join(''):'<p>No text on this page (scanned image?). Tap Next.</p>'}
+function walk(a){const w=document.createTreeWalker(a,4),ns=[];while(w.nextNode())ns.push(w.currentNode);
+ ns.forEach(n=>{if(n.nodeValue.trim()){const s=document.createElement('span');s.innerHTML=bionic(n.nodeValue,S.str);n.replaceWith(s)}})}
+async function draw(){const a=$('#t'),w=Math.min(innerWidth,700)-40;a.style.fontSize=S.size+'px';$('#pgb').textContent=['📄','🖼','🔠'][S.vm];
+ if(D.render&&S.vm==1){a.replaceChildren(await D.render(cur,w));prog();return}
+ if(!paras.length&&D.render){a.innerHTML='<p>📷 Scanned page, no text found.</p><p><button id="oc">Read with Claude (OCR)</button></p><p style="color:var(--mut);font-size:14px">Or tap the page button (top right) to see the page as an image.</p>';$('#oc').onclick=ocr;return}
+ if(D.render&&S.vm==2){const c=await D.layout(cur,w);a.replaceChildren(c);fit(c);prog();return}
+ a.innerHTML=paras.join('')||'<p>Nothing on this page.</p>';if(S.bio)walk(a);prog()}
+// fit each word-run to its original width using letter-spacing (keeps glyphs unsquashed); ponytail: rotated text not handled
+function fit(c){const ss=[...c.children];if(S.bio)ss.forEach(x=>x.innerHTML=bionic(x.textContent,S.str));
+ const ws=ss.map(x=>x.offsetWidth);ss.forEach((x,i)=>{const h=parseFloat(x.style.fontSize),n=x.textContent.length;if(ws[i]&&n>1)x.style.letterSpacing=Math.min(Math.max((x.dataset.w-ws[i])/n,-.08*h),.3*h)+'px'})}
+async function ocr(){const b=$('#oc');b.textContent='Reading…';
+ try{const sm=await window.claude?.use('sample');if(!sm)throw{message:'OCR needs Claude (open this from claude.ai)'};
+  const c=await D.render(cur,1100),blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));
+  const r=await sm('Transcribe all text in this page image exactly as written. Separate paragraphs with a blank line. Output only the text, no commentary.',{images:[blob],modelTier:'quick'});
+  paras=D.cache[cur]=reflow(r.text).map(x=>`<p>${esc(x)}</p>`);draw()}
+ catch(e){b.textContent='OCR failed: '+(e.message||e.code)}}
 function prog(){const h=document.documentElement,f=h.scrollHeight>innerHeight?scrollY/(h.scrollHeight-innerHeight):1;$('#bar').style.width=(D?(cur+f)/D.n*100:0)+'%'}
 addEventListener('scroll',prog);
 function burst(msg){const t=$('#toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1400);
  for(let i=0;i<16;i++){const s=document.createElement('span');s.className='pop';s.textContent='📚✨🎉🔥⭐'.match(/./gu)[i%5];
   s.style.setProperty('--x',(Math.random()*300-150)+'px');s.style.setProperty('--r',(Math.random()*360-180)+'deg');s.style.left=(30+Math.random()*40)+'%';
   document.body.append(s);setTimeout(()=>s.remove(),1200)}}
-async function show(i){cur=i;paras=await D.get(i);draw();scrollTo(0,0);prog();
- $('#ttl').textContent=`📖 ${cur+1}/${D.n}`;try{localStorage['pos:'+name]=i}catch(e){}}
+async function show(i){cur=i;paras=D.cache[i]||await D.get(i);await draw();scrollTo(0,0);prog();
+ const t=D.toc.filter(x=>x.i<=cur).pop();$('#ttl').textContent=`${D.render?'Page':'Section'} ${cur+1}/${D.n}${t?' · '+t.t:''}`;toc.style.display='none';try{localStorage['pos:'+name]=i}catch(e){}}
 $('#pv').onclick=()=>cur>0&&show(cur-1);
 $('#nx').onclick=()=>{const w=paras.join(' ').split(/\s+/).length,td=new Date().toDateString();
  if(P.last!==td){P.streak=P.last===new Date(Date.now()-864e5).toDateString()?P.streak+1:1;P.last=td}
  const last=cur+1>=D.n,g=10+Math.round(w/20)+(last?100:0);P.xp+=g;save();hud();
  burst(last?`🏆 Book finished! +${g} XP`:`+${g} XP · section done!`);if(!last)show(cur+1)};
-// ponytail: pdf.js runs on main thread (worker script loaded via <script>; CSP blocks cross-origin Worker). Fine for phones/normal books.
+// ponytail: pdf.js runs on main thread (worker script loaded via a script tag; CSP blocks cross-origin Worker). Fine for phones/normal books.
 const reflow=s=>s.replace(/-\n/g,'').replace(/([.!?:”"'])\s*\n/g,'$1\n\n').replace(/(?<!\n)\n(?!\n)/g,' ').split(/\n\n+/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
-async function openPDF(buf){const d=await pdfjsLib.getDocument({data:buf}).promise;
- return{n:d.numPages,get:async i=>{const tc=await(await d.getPage(i+1)).getTextContent();let s='';for(const it of tc.items)s+=it.str+(it.hasEOL?'\n':' ');return reflow(s)}}}
-async function openEPUB(buf){const z=await JSZip.loadAsync(buf),rd=p=>z.file(decodeURIComponent(p)).async('string'),px=s=>new DOMParser().parseFromString(s,'application/xml');
- const op=px(await rd('META-INF/container.xml')).querySelector('rootfile').getAttribute('full-path'),opf=px(await rd(op)),dir=op.replace(/[^/]*$/,''),man={};
- opf.querySelectorAll('manifest > item').forEach(i=>man[i.getAttribute('id')]=i.getAttribute('href'));
- const sp=[...opf.querySelectorAll('spine > itemref')].map(r=>man[r.getAttribute('idref')]).filter(Boolean);
- return{n:sp.length,get:async i=>{const h=new DOMParser().parseFromString(await rd(dir+sp[i]),'text/html');
-  return[...h.body.querySelectorAll('h1,h2,h3,h4,p,li,blockquote')].filter(e=>!e.querySelector('p,li')).map(e=>e.textContent.replace(/\s+/g,' ').trim()).filter(Boolean)}}}
+async function openPDF(buf){const d=await pdfjsLib.getDocument({data:buf}).promise,toc=[];
+ const ol=async(items,l)=>{for(const o of items){try{const x=typeof o.dest=='string'?await d.getDestination(o.dest):o.dest;if(x)toc.push({t:o.title.trim(),i:await d.getPageIndex(x[0]),l})}catch(e){}await ol(o.items||[],l+1)}};
+ try{await ol(await d.getOutline()||[],0)}catch(e){}
+ return{n:d.numPages,toc,cache:{},
+  get:async i=>{const tc=await(await d.getPage(i+1)).getTextContent();let s='';for(const it of tc.items)s+=it.str+(it.hasEOL?'\n':' ');return reflow(s).map(x=>`<p>${esc(x)}</p>`)},
+  layout:async(i,w)=>{const pg=await d.getPage(i+1),v=pg.getViewport({scale:w/pg.getViewport({scale:1}).width}),c=document.createElement('div');
+   c.className='tl';c.style.cssText=`position:relative;width:${v.width}px;height:${v.height}px`;
+   for(const it of(await pg.getTextContent()).items){if(!it.str.trim())continue;const m=pdfjsLib.Util.transform(v.transform,it.transform),h=Math.hypot(m[2],m[3]),x=document.createElement('span');
+    x.textContent=it.str;x.dataset.w=it.width*v.scale;x.style.cssText=`left:${m[4]}px;top:${m[5]-h*.85}px;font-size:${h}px`;c.append(x)}return c},
+  render:async(i,w)=>{const pg=await d.getPage(i+1),s=w/pg.getViewport({scale:1}).width*Math.min(devicePixelRatio,2),v=pg.getViewport({scale:s}),c=document.createElement('canvas');
+   c.width=v.width;c.height=v.height;await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise;return c}}}
+async function openEPUB(buf){const z=await JSZip.loadAsync(buf),rd=p=>z.file(p).async('string'),px=s=>new DOMParser().parseFromString(s,'application/xml'),hx=s=>new DOMParser().parseFromString(s,'text/html');
+ const res=(b,h)=>decodeURIComponent(new URL(h,'http://x/'+b).pathname.slice(1)),lv=(a,s)=>{let l=0,e=a.parentElement.closest(s);while(e){l++;e=e.parentElement?.closest(s)}return l-1};
+ const op=px(await rd('META-INF/container.xml')).querySelector('rootfile').getAttribute('full-path'),opf=px(await rd(op)),man={},its=[...opf.querySelectorAll('manifest > item')];
+ its.forEach(i=>man[i.getAttribute('id')]=res(op,i.getAttribute('href')));
+ const sp=[...opf.querySelectorAll('spine > itemref')].map(r=>man[r.getAttribute('idref')]).filter(Boolean),ix=(b,h)=>sp.indexOf(res(b,h.split('#')[0])),nv=its.find(i=>/\bnav\b/.test(i.getAttribute('properties')||'')),nx=man[opf.querySelector('spine').getAttribute('toc')];
+ let toc=[];try{if(nv){const np=man[nv.getAttribute('id')],h=hx(await rd(np));
+   toc=[...(h.querySelector('nav[epub\\:type=toc]')||h.querySelector('nav')).querySelectorAll('a')].map(a=>({t:a.textContent.trim(),i:ix(np,a.getAttribute('href')),l:lv(a,'ol')}))}
+  else if(nx){toc=[...px(await rd(nx)).querySelectorAll('navPoint')].map(p=>{const c=p.querySelector('content');return{t:p.querySelector('navLabel').textContent.trim(),i:ix(nx,c.getAttribute('src')),l:lv(c,'navPoint')}})}}catch(e){}
+ const mt={jpg:'jpeg',svg:'svg+xml'},q='h1,h2,h3,h4,p,li,blockquote,table,img,pre';
+ return{n:sp.length,toc:toc.filter(x=>x.i>=0&&x.t),cache:{},get:async i=>{const h=hx(await rd(sp[i]));
+  h.querySelectorAll('script,style,link,iframe,object,embed').forEach(e=>e.remove());
+  for(const im of h.querySelectorAll('img')){try{const p=res(sp[i],im.getAttribute('src')),e=p.split('.').pop().toLowerCase();im.setAttribute('src','data:image/'+(mt[e]||e)+';base64,'+await z.file(p).async('base64'))}catch(x){im.remove()}}
+  h.body.querySelectorAll('*').forEach(e=>[...e.attributes].forEach(a=>!['src','alt','colspan','rowspan'].includes(a.name)&&e.removeAttribute(a.name)));
+  return[...h.body.querySelectorAll(q)].filter(e=>!e.parentElement.closest(q)&&(e.textContent.trim()||e.tagName=='IMG'||e.querySelector('img'))).map(e=>e.tagName=='LI'?'<ul>'+e.outerHTML+'</ul>':e.outerHTML)}}}
 $('#f').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('#err').textContent='Opening…';
  try{const buf=await f.arrayBuffer();name=f.name;D=/\.epub$/i.test(f.name)?await openEPUB(buf):await openPDF(buf);
+  $('#toc').innerHTML='<div style="display:flex;gap:6px;padding:4px"><input id="gp" type="number" min="1" max="'+D.n+'" placeholder="Go to page (1-'+D.n+')" style="flex:1;min-width:0;padding:8px;border-radius:10px;border:1px solid var(--mut);background:var(--bg);color:var(--fg)"><button id="gg">Go</button></div>'+D.toc.map(x=>`<button style="padding-left:${8+x.l*14}px" data-i="${x.i}">${esc(x.t)}</button>`).join('')||'<p style="padding:8px;color:var(--mut)">No contents found in this book.</p>';
+  $('#toc').onclick=e=>{if(e.target.dataset.i)show(+e.target.dataset.i);if(e.target.id=='gg'){const n=Math.round(+$('#gp').value);if(n>=1&&n<=D.n)show(n-1)}};
+  $('#pgb').hidden=!D.render;
   $('#home').hidden=true;$('#rd').hidden=false;let p=0;try{p=+localStorage['pos:'+name]||0}catch(x){}await show(Math.min(p,D.n-1))}
  catch(x){$('#err').textContent='Could not open that file: '+x.message}};
 </script></body></html>
