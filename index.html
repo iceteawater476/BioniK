@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Bionic Reader (Copy)</title>
+
+<html lang="en"><head><meta charset="utf-8"><title>Bionic Reader</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
 :root{--bg:#fafaf7;--fg:#222;--mut:#777;--ac:#6c5ce7;--card:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -15,7 +15,7 @@ button.g{background:var(--card);color:var(--fg)}
 #bar{height:4px;background:var(--ac);width:0;transition:width .3s;position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px);z-index:5}
 #home{text-align:center;padding:18vh 24px}
 #home h1{font-size:30px;margin:0 0 8px}#home p{color:var(--mut);margin:0 0 24px}
-article{max-width:42rem;margin:0 auto;padding:12px 20px 30px;line-height:1.7;font-family:Georgia,serif}
+article{max-width:42rem;margin:0 auto;padding:12px 20px 100px;line-height:1.7;font-family:Georgia,serif}
 article p{margin:0 0 1em}article b{font-weight:800;color:var(--fg)}
 nav{display:flex;gap:10px;max-width:42rem;margin:0 auto;padding:0 20px 40px}nav button{flex:1}
 #set{display:none;position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 56px);background:var(--card);padding:16px;border-radius:16px;box-shadow:0 8px 30px #0005;z-index:9;width:230px}
@@ -29,26 +29,34 @@ article img,article canvas{max-width:100%;height:auto;display:block;margin:0 aut
 #ttl{max-width:45vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tl{background:var(--card);margin:0 auto 1em;overflow:hidden;box-shadow:0 2px 12px #0003}.tl span{position:absolute;white-space:pre;color:var(--fg);line-height:1;font-family:Georgia,serif}.tl b{font-weight:800}
 #toast{position:fixed;left:50%;top:40%;transform:translateX(-50%);background:var(--ac);color:var(--bg);padding:10px 20px;border-radius:30px;font-weight:700;display:none;z-index:20}
+html{-webkit-text-size-adjust:100%}body{-webkit-tap-highlight-color:transparent;overscroll-behavior-x:none}
+button,label.btn{min-height:44px}header button{padding:8px 12px}
+article{overflow-x:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch}article canvas{max-width:none}
+#set,#toc{top:auto;bottom:calc(76px + env(safe-area-inset-bottom,0px));left:12px;right:12px;width:auto;max-height:55vh;overflow:auto}
+#set input[type=range]{height:36px}#set input[type=checkbox]{width:22px;height:22px;vertical-align:middle}#gp{font-size:16px}
+#bb{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--card);z-index:6}#bb[hidden]{display:none}#bb button{flex:1;font-size:18px;padding:0}#bb #zl{font-size:14px}
 </style></head><body>
-<header><button class="g" onclick="tg(toc)">☰</button><b id="ttl">📖 Bionic</b><span id="xp"></span><button class="g" id="pgb" hidden>🖼</button><button class="g" onclick="tg(set)">Aa</button></header>
+<header><button class="g" onclick="tg(toc)">☰</button><b id="ttl">📖 Bionic</b><span id="xp"></span><button class="g" onclick="tg(set)">Aa</button></header>
 <div id="bar"></div>
 <div id="toc"></div>
 <div id="set">
  <label><input type="checkbox" id="bio" checked> Bionic reading</label>
  <label>Bold amount</label><input type="range" id="str" min="0.2" max="0.7" step="0.05">
- <label>Text size</label><input type="range" id="size" min="14" max="30">
+ <label>Text size</label><input type="range" id="size" min="14" max="40">
+ <div id="vmb" hidden><label>PDF view</label><div style="display:flex;gap:6px"><button class="g" data-v="0">📄 Text</button><button class="g" data-v="2">🔠 Page</button><button class="g" data-v="1">🖼 Image</button></div></div>
  <label>Theme</label><div style="display:flex;gap:6px"><button class="g" onclick="th('light')">☀️</button><button class="g" onclick="th('sepia')">📜</button><button class="g" onclick="th('dark')">🌙</button></div>
 </div>
 <div id="home"><h1>📚 Read faster, have fun</h1><p>Open a PDF or EPUB. Earn XP for every section you finish.</p>
 <label class="btn">Choose a book<input type="file" id="f" accept=".pdf,.epub,application/pdf,application/epub+zip" hidden></label><p id="err" style="margin-top:20px"></p></div>
-<main id="rd" hidden><article id="t"></article><nav><button class="g" id="pv">← Back</button><button id="nx">Done · Next →</button></nav></main>
+<main id="rd" hidden><article id="t"></article></main>
+<div id="bb" hidden><button class="g" id="bp" aria-label="Previous">◀</button><button class="g" id="zo" aria-label="Zoom out">−</button><button class="g" id="zl" aria-label="Reset zoom">100%</button><button class="g" id="zi" aria-label="Zoom in">+</button><button id="bn" aria-label="Done, next">▶</button></div>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 const $=s=>document.querySelector(s),tg=e=>{const o=e.style.display=='block';toc.style.display=set.style.display='none';e.style.display=o?'none':'block'};
-let S={bio:1,str:.45,size:19,theme:'',vm:2},P={xp:0,streak:0,last:''},D,cur=0,name,paras=[];
+let S={bio:1,str:.45,size:19,theme:'',vm:2,z:1},P={xp:0,streak:0,last:''},D,cur=0,name,paras=[];
 try{Object.assign(S,JSON.parse(localStorage.s||'{}'));Object.assign(P,JSON.parse(localStorage.p||'{}'))}catch(e){}
 const save=()=>{try{localStorage.s=JSON.stringify(S);localStorage.p=JSON.stringify(P)}catch(e){}};
 const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
@@ -58,15 +66,19 @@ const th=t=>{S.theme=t;document.documentElement.dataset.theme=t;save()};
 th(S.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
 $('#bio').checked=!!S.bio;$('#str').value=S.str;$('#size').value=S.size;
 ['bio','str','size'].forEach(id=>$('#'+id).oninput=e=>{S[id]=id=='bio'?+e.target.checked:+e.target.value;save();draw()});
-$('#pgb').onclick=()=>{S.vm=(S.vm+1)%3;save();draw()};
+
 function hud(){const l=Math.floor(Math.sqrt(P.xp/50))+1;$('#xp').textContent=`Lv ${l} · ${P.xp} XP · 🔥${P.streak}`}hud();
 function walk(a){const w=document.createTreeWalker(a,4),ns=[];while(w.nextNode())ns.push(w.currentNode);
  ns.forEach(n=>{if(n.nodeValue.trim()){const s=document.createElement('span');s.innerHTML=bionic(n.nodeValue,S.str);n.replaceWith(s)}})}
-async function draw(){const a=$('#t'),w=Math.min(innerWidth,700)-40;a.style.fontSize=S.size+'px';$('#pgb').textContent=['📄','🖼','🔠'][S.vm];
- if(D.render&&S.vm==1){a.replaceChildren(await D.render(cur,w));prog();return}
- if(!paras.length&&D.render){a.innerHTML='<p>📷 Scanned page, no text found.</p><p><button id="oc">Read with Claude (OCR)</button></p><p style="color:var(--mut);font-size:14px">Or tap the page button (top right) to see the page as an image.</p>';$('#oc').onclick=ocr;return}
- if(D.render&&S.vm==2){const c=await D.layout(cur,w);a.replaceChildren(c);fit(c);prog();return}
+async function draw(){const a=$('#t'),pm=D.render&&S.vm>0,w=Math.min(innerWidth-8,800)*S.z;
+ a.style.fontSize=S.size+'px';a.style.maxWidth=a.style.padding='';
+ $('#zl').textContent=Math.round((pm?S.z:S.size/19)*100)+'%';$('#vmb').querySelectorAll('button').forEach(b=>b.style.outline=b.dataset.v==S.vm?'2px solid var(--ac)':'');
+ if(pm&&(S.vm==1||(paras.length&&!D.cache[cur]))){a.style.maxWidth='none';a.style.padding='4px 0 100px';
+  const c=await(S.vm==1?D.render(cur,w):D.layout(cur,w));a.replaceChildren(c);if(S.vm==2)fit(c);prog();return}
+ if(!paras.length&&D.render){a.innerHTML='<p>📷 Scanned page, no text found.</p><p><button id="oc">Read with Claude (OCR)</button></p><p style="color:var(--mut);font-size:14px">Or pick 🖼 Image in the Aa menu to see the page as an image.</p>';$('#oc').onclick=ocr;return}
  a.innerHTML=paras.join('')||'<p>Nothing on this page.</p>';if(S.bio)walk(a);prog()}
+async function redraw(){const a=$('#t'),e=document.documentElement,rx=(a.scrollLeft+a.clientWidth/2)/(a.scrollWidth||1),ry=(scrollY+innerHeight/2)/e.scrollHeight;
+ await draw();a.scrollLeft=rx*a.scrollWidth-a.clientWidth/2;scrollTo(0,ry*e.scrollHeight-innerHeight/2)}
 // fit each word-run to its original width using letter-spacing (keeps glyphs unsquashed); ponytail: rotated text not handled
 function fit(c){const ss=[...c.children];if(S.bio)ss.forEach(x=>x.innerHTML=bionic(x.textContent,S.str));
  const ws=ss.map(x=>x.offsetWidth);ss.forEach((x,i)=>{const h=parseFloat(x.style.fontSize),n=x.textContent.length;if(ws[i]&&n>1)x.style.letterSpacing=Math.min(Math.max((x.dataset.w-ws[i])/n,-.08*h),.3*h)+'px'})}
@@ -82,13 +94,13 @@ function burst(msg){const t=$('#toast');t.textContent=msg;t.style.display='block
  for(let i=0;i<16;i++){const s=document.createElement('span');s.className='pop';s.textContent='📚✨🎉🔥⭐'.match(/./gu)[i%5];
   s.style.setProperty('--x',(Math.random()*300-150)+'px');s.style.setProperty('--r',(Math.random()*360-180)+'deg');s.style.left=(30+Math.random()*40)+'%';
   document.body.append(s);setTimeout(()=>s.remove(),1200)}}
-async function show(i){cur=i;paras=D.cache[i]||await D.get(i);await draw();scrollTo(0,0);prog();
+async function show(i){cur=i;paras=D.cache[i]||await D.get(i);await draw();scrollTo(0,0);$('#t').scrollLeft=0;prog();
  const t=D.toc.filter(x=>x.i<=cur).pop();$('#ttl').textContent=`${D.render?'Page':'Section'} ${cur+1}/${D.n}${t?' · '+t.t:''}`;toc.style.display='none';try{localStorage['pos:'+name]=i}catch(e){}}
-$('#pv').onclick=()=>cur>0&&show(cur-1);
-$('#nx').onclick=()=>{const w=paras.join(' ').split(/\s+/).length,td=new Date().toDateString();
+const prv=()=>cur>0&&show(cur-1);
+function nxt(){const w=paras.join(' ').split(/\s+/).length,td=new Date().toDateString();
  if(P.last!==td){P.streak=P.last===new Date(Date.now()-864e5).toDateString()?P.streak+1:1;P.last=td}
  const last=cur+1>=D.n,g=10+Math.round(w/20)+(last?100:0);P.xp+=g;save();hud();
- burst(last?`🏆 Book finished! +${g} XP`:`+${g} XP · section done!`);if(!last)show(cur+1)};
+ burst(last?`🏆 Book finished! +${g} XP`:`+${g} XP · section done!`);if(!last)show(cur+1)}
 // ponytail: pdf.js runs on main thread (worker script loaded via a script tag; CSP blocks cross-origin Worker). Fine for phones/normal books.
 const reflow=s=>s.replace(/-\n/g,'').replace(/([.!?:”"'])\s*\n/g,'$1\n\n').replace(/(?<!\n)\n(?!\n)/g,' ').split(/\n\n+/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
 async function openPDF(buf){const d=await pdfjsLib.getDocument({data:buf}).promise,toc=[];
@@ -100,8 +112,8 @@ async function openPDF(buf){const d=await pdfjsLib.getDocument({data:buf}).promi
    c.className='tl';c.style.cssText=`position:relative;width:${v.width}px;height:${v.height}px`;
    for(const it of(await pg.getTextContent()).items){if(!it.str.trim())continue;const m=pdfjsLib.Util.transform(v.transform,it.transform),h=Math.hypot(m[2],m[3]),x=document.createElement('span');
     x.textContent=it.str;x.dataset.w=it.width*v.scale;x.style.cssText=`left:${m[4]}px;top:${m[5]-h*.85}px;font-size:${h}px`;c.append(x)}return c},
-  render:async(i,w)=>{const pg=await d.getPage(i+1),s=w/pg.getViewport({scale:1}).width*Math.min(devicePixelRatio,2),v=pg.getViewport({scale:s}),c=document.createElement('canvas');
-   c.width=v.width;c.height=v.height;await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise;return c}}}
+  render:async(i,w)=>{const pg=await d.getPage(i+1),b=pg.getViewport({scale:1}),s=Math.min(w/b.width*Math.min(devicePixelRatio,2),Math.sqrt(16e6/(b.width*b.height))),v=pg.getViewport({scale:s}),c=document.createElement('canvas');
+   c.width=v.width;c.height=v.height;c.style.width=w+'px';await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise;return c}}}
 async function openEPUB(buf){const z=await JSZip.loadAsync(buf),rd=p=>z.file(p).async('string'),px=s=>new DOMParser().parseFromString(s,'application/xml'),hx=s=>new DOMParser().parseFromString(s,'text/html');
  const res=(b,h)=>decodeURIComponent(new URL(h,'http://x/'+b).pathname.slice(1)),lv=(a,s)=>{let l=0,e=a.parentElement.closest(s);while(e){l++;e=e.parentElement?.closest(s)}return l-1};
  const op=px(await rd('META-INF/container.xml')).querySelector('rootfile').getAttribute('full-path'),opf=px(await rd(op)),man={},its=[...opf.querySelectorAll('manifest > item')];
@@ -120,7 +132,19 @@ $('#f').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('#err').text
  try{const buf=await f.arrayBuffer();name=f.name;D=/\.epub$/i.test(f.name)?await openEPUB(buf):await openPDF(buf);
   $('#toc').innerHTML='<div style="display:flex;gap:6px;padding:4px"><input id="gp" type="number" min="1" max="'+D.n+'" placeholder="Go to page (1-'+D.n+')" style="flex:1;min-width:0;padding:8px;border-radius:10px;border:1px solid var(--mut);background:var(--bg);color:var(--fg)"><button id="gg">Go</button></div>'+D.toc.map(x=>`<button style="padding-left:${8+x.l*14}px" data-i="${x.i}">${esc(x.t)}</button>`).join('')||'<p style="padding:8px;color:var(--mut)">No contents found in this book.</p>';
   $('#toc').onclick=e=>{if(e.target.dataset.i)show(+e.target.dataset.i);if(e.target.id=='gg'){const n=Math.round(+$('#gp').value);if(n>=1&&n<=D.n)show(n-1)}};
-  $('#pgb').hidden=!D.render;
+  $('#vmb').hidden=!D.render;$('#bb').hidden=false;
   $('#home').hidden=true;$('#rd').hidden=false;let p=0;try{p=+localStorage['pos:'+name]||0}catch(x){}await show(Math.min(p,D.n-1))}
  catch(x){$('#err').textContent='Could not open that file: '+x.message}};
+// phone controls: zoom buttons, pinch, double-tap, swipe
+const zm=k=>{if(D.render&&S.vm>0)S.z=Math.min(4,Math.max(.6,+(S.z*k).toFixed(2)));else{S.size=Math.min(40,Math.max(14,Math.round(S.size*k)));$('#size').value=S.size}save();redraw()};
+$('#zi').onclick=()=>zm(1.25);$('#zo').onclick=()=>zm(.8);$('#zl').onclick=()=>{S.z=1;S.size=19;$('#size').value=19;save();redraw()};$('#bp').onclick=prv;$('#bn').onclick=nxt;
+$('#vmb').onclick=e=>{if(e.target.dataset.v){S.vm=+e.target.dataset.v;save();redraw()}};
+{const a=$('#t'),dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);let pd=0,pz=1,t0,lt=0,pinch=0;
+ a.ontouchstart=e=>{if(e.touches.length==2){pd=dist(e.touches);pinch=1;pz=1}else if(e.touches.length==1&&!pinch)t0={x:e.touches[0].clientX,y:e.touches[0].clientY}};
+ a.ontouchmove=e=>{if(e.touches.length==2&&pd){pz=dist(e.touches)/pd;a.style.transformOrigin='50% 0';a.style.transform=`scale(${pz})`}};
+ a.ontouchend=e=>{if(e.touches.length)return;if(pinch){pinch=0;pd=0;a.style.transform='';if(Math.abs(pz-1)>.05)zm(pz);return}
+  const c=e.changedTouches[0],dx=c.clientX-t0.x,dy=c.clientY-t0.y;
+  if(Math.abs(dx)<10&&Math.abs(dy)<10){const n=Date.now();if(n-lt<300&&D.render&&S.vm>0){S.z=S.z>1.05?1:2;save();redraw()}lt=n;return}
+  if(Math.abs(dx)>70&&Math.abs(dy)<45&&(!(D.render&&S.vm>0)||S.z<=1.05))dx<0?nxt():prv()}}
 </script></body></html>
+
