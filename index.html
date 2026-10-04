@@ -1,6 +1,7 @@
-
+<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Bionic Reader</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 :root{--bg:#fafaf7;--fg:#222;--mut:#777;--ac:#6c5ce7;--card:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme]){--bg:#121214;--fg:#e6e6ea;--mut:#8a8a94;--ac:#a29bfe;--card:#1d1d22}}
@@ -35,19 +36,33 @@ article{overflow-x:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touc
 #set,#toc{top:auto;bottom:calc(76px + env(safe-area-inset-bottom,0px));left:12px;right:12px;width:auto;max-height:55vh;overflow:auto}
 #set input[type=range]{height:36px}#set input[type=checkbox]{width:22px;height:22px;vertical-align:middle}#gp{font-size:16px}
 #bb{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--card);z-index:6}#bb[hidden]{display:none}#bb button{flex:1;font-size:18px;padding:0}#bb #zl{font-size:14px}
+html{scroll-behavior:smooth}
+article{max-width:38rem;font-family:var(--ff,Literata,Georgia,serif);line-height:var(--lh,1.8);hyphens:auto;letter-spacing:.005em}article p{margin:0 0 1.1em}
+#home{text-align:left;padding:8px 14px 100px;max-width:60rem;margin:0 auto}.hb{display:flex;justify-content:space-between;align-items:center}.hb h2{margin:0}
+#tabs{display:flex;gap:6px;overflow-x:auto;padding:12px 0}#tabs button{white-space:nowrap;font-size:14px;padding:6px 12px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:14px;margin-bottom:16px}.bk{position:relative;cursor:pointer}.bk small{color:var(--mut);font-size:12px}
+.cv{aspect-ratio:2/3;border-radius:8px;display:flex;flex-direction:column;justify-content:flex-end;padding:8px;color:#fff;font:700 13px Georgia,serif;overflow:hidden;box-shadow:0 2px 8px #0004}.cv small{color:#ffffffcc;font-weight:400;margin-top:4px}
+.pb{height:4px;background:var(--card);border-radius:2px;margin:6px 0 2px}.pb i{display:block;height:100%;background:var(--ac);border-radius:2px}.ed{position:absolute;top:4px;right:4px;min-height:30px;padding:0 9px;opacity:.9}
+details{margin:10px 0;background:var(--card);border-radius:12px;padding:10px 14px}summary{font-weight:600;min-height:28px}.fm{display:grid;gap:8px;margin-top:8px}
+input:not([type=range]):not([type=checkbox]),select,textarea{font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--mut);background:var(--bg);color:var(--fg);width:100%;box-sizing:border-box}
+#ed{position:fixed;left:0;right:0;bottom:0;max-height:85vh;overflow:auto;background:var(--card);padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;box-shadow:0 -8px 30px #0006;z-index:15}#ed[hidden]{display:none}#ed label{display:block;font-size:13px;color:var(--mut);margin:10px 0 2px}#ed a,details a{color:var(--ac)}
 </style></head><body>
-<header><button class="g" onclick="tg(toc)">☰</button><b id="ttl">📖 Bionic</b><span id="xp"></span><button class="g" onclick="tg(set)">Aa</button></header>
+<header><button class="g" onclick="goHome()">📚</button><button class="g" onclick="tg(toc)">☰</button><b id="ttl">📖 Bionic</b><span id="xp"></span><button class="g" onclick="tg(set)">Aa</button></header>
 <div id="bar"></div>
 <div id="toc"></div>
 <div id="set">
  <label><input type="checkbox" id="bio" checked> Bionic reading</label>
  <label>Bold amount</label><input type="range" id="str" min="0.2" max="0.7" step="0.05">
+ <label>Line spacing</label><input type="range" id="lh" min="1.4" max="2.2" step="0.1"><button class="g" id="ffb" style="margin-top:8px">Serif / Sans</button>
  <label>Text size</label><input type="range" id="size" min="14" max="40">
  <div id="vmb" hidden><label>PDF view</label><div style="display:flex;gap:6px"><button class="g" data-v="0">📄 Text</button><button class="g" data-v="2">🔠 Page</button><button class="g" data-v="1">🖼 Image</button></div></div>
  <label>Theme</label><div style="display:flex;gap:6px"><button class="g" onclick="th('light')">☀️</button><button class="g" onclick="th('sepia')">📜</button><button class="g" onclick="th('dark')">🌙</button></div>
 </div>
-<div id="home"><h1>📚 Read faster, have fun</h1><p>Open a PDF or EPUB. Earn XP for every section you finish.</p>
-<label class="btn">Choose a book<input type="file" id="f" accept=".pdf,.epub,application/pdf,application/epub+zip" hidden></label><p id="err" style="margin-top:20px"></p></div>
+<div id="home"><div class="hb"><h2>My library</h2><label class="btn">＋ Add book<input type="file" id="f" accept=".pdf,.epub,application/pdf,application/epub+zip" hidden></label></div>
+<div id="tabs"></div><div id="grid"></div><p id="err" style="color:var(--mut)"></p>
+<details><summary>＋ Add by hand (no file)</summary><div class="fm"><input id="aht" placeholder="Title"><input id="aha" placeholder="Author"><input id="ahp" type="number" placeholder="Pages"><select id="ahs"><option value="want">Want to read</option><option value="reading">Reading</option><option value="read">Read</option></select><button id="ahb">Add</button></div></details>
+<details><summary>Goodreads</summary><p style="color:var(--mut);font-size:14px">Goodreads has no public API, so sync works through CSV: export from goodreads.com/review/import, then import it here. You can also export this library back.</p><label class="btn g">Import Goodreads CSV<input type="file" id="gi" accept=".csv,text/csv" hidden></label> <button class="g" id="gx">Export CSV</button></details></div>
+<div id="ed" hidden></div>
 <main id="rd" hidden><article id="t"></article></main>
 <div id="bb" hidden><button class="g" id="bp" aria-label="Previous">◀</button><button class="g" id="zo" aria-label="Zoom out">−</button><button class="g" id="zl" aria-label="Reset zoom">100%</button><button class="g" id="zi" aria-label="Zoom in">+</button><button id="bn" aria-label="Done, next">▶</button></div>
 <div id="toast"></div>
@@ -56,7 +71,7 @@ article{overflow-x:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touc
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 const $=s=>document.querySelector(s),tg=e=>{const o=e.style.display=='block';toc.style.display=set.style.display='none';e.style.display=o?'none':'block'};
-let S={bio:1,str:.45,size:19,theme:'',vm:2,z:1},P={xp:0,streak:0,last:''},D,cur=0,name,paras=[];
+let S={bio:1,str:.45,size:19,theme:'',vm:2,z:1,lh:1.8,ff:'serif'},P={xp:0,streak:0,last:''},D,cur=0,name,paras=[],lib=[],cb,tab='all',sv;
 try{Object.assign(S,JSON.parse(localStorage.s||'{}'));Object.assign(P,JSON.parse(localStorage.p||'{}'))}catch(e){}
 const save=()=>{try{localStorage.s=JSON.stringify(S);localStorage.p=JSON.stringify(P)}catch(e){}};
 const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
@@ -65,13 +80,14 @@ console.assert(bionic('Hello, world',.5)==='<b>Hel</b>lo, <b>wor</b>ld','bionic 
 const th=t=>{S.theme=t;document.documentElement.dataset.theme=t;save()};
 th(S.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
 $('#bio').checked=!!S.bio;$('#str').value=S.str;$('#size').value=S.size;
-['bio','str','size'].forEach(id=>$('#'+id).oninput=e=>{S[id]=id=='bio'?+e.target.checked:+e.target.value;save();draw()});
+$('#lh').value=S.lh;$('#ffb').onclick=()=>{S.ff=S.ff=='sans'?'serif':'sans';save();draw()};
+['bio','str','size','lh'].forEach(id=>$('#'+id).oninput=e=>{S[id]=id=='bio'?+e.target.checked:+e.target.value;save();draw()});
 
 function hud(){const l=Math.floor(Math.sqrt(P.xp/50))+1;$('#xp').textContent=`Lv ${l} · ${P.xp} XP · 🔥${P.streak}`}hud();
 function walk(a){const w=document.createTreeWalker(a,4),ns=[];while(w.nextNode())ns.push(w.currentNode);
  ns.forEach(n=>{if(n.nodeValue.trim()){const s=document.createElement('span');s.innerHTML=bionic(n.nodeValue,S.str);n.replaceWith(s)}})}
 async function draw(){const a=$('#t'),pm=D.render&&S.vm>0,w=Math.min(innerWidth-8,800)*S.z;
- a.style.fontSize=S.size+'px';a.style.maxWidth=a.style.padding='';
+ a.style.fontSize=S.size+'px';document.documentElement.style.setProperty('--lh',S.lh);a.style.setProperty('--ff',S.ff=='sans'?'"Atkinson Hyperlegible",system-ui,sans-serif':'Literata,Georgia,serif');a.style.maxWidth=a.style.padding='';
  $('#zl').textContent=Math.round((pm?S.z:S.size/19)*100)+'%';$('#vmb').querySelectorAll('button').forEach(b=>b.style.outline=b.dataset.v==S.vm?'2px solid var(--ac)':'');
  if(pm&&(S.vm==1||(paras.length&&!D.cache[cur]))){a.style.maxWidth='none';a.style.padding='4px 0 100px';
   const c=await(S.vm==1?D.render(cur,w):D.layout(cur,w));a.replaceChildren(c);if(S.vm==2)fit(c);prog();return}
@@ -88,25 +104,34 @@ async function ocr(){const b=$('#oc');b.textContent='Reading…';
   const r=await sm('Transcribe all text in this page image exactly as written. Separate paragraphs with a blank line. Output only the text, no commentary.',{images:[blob],modelTier:'quick'});
   paras=D.cache[cur]=reflow(r.text).map(x=>`<p>${esc(x)}</p>`);draw()}
  catch(e){b.textContent='OCR failed: '+(e.message||e.code)}}
-function prog(){const h=document.documentElement,f=h.scrollHeight>innerHeight?scrollY/(h.scrollHeight-innerHeight):1;$('#bar').style.width=(D?(cur+f)/D.n*100:0)+'%'}
+const pageTotal=()=>D.render?D.n:(cb.pages||Math.round(D.len.reduce((a,b)=>a+(b||0),0)/(D.len.filter(x=>x).length||1)*D.n/1800)||D.n);
+function pg(){const T=pageTotal();if(D.render)return[cur+1,T];const L=D.len,k=L.filter(x=>x),av=k.reduce((a,b)=>a+b,0)/(k.length||1)||1,h=document.documentElement,sf=Math.min(1,Math.max(0,scrollY/Math.max(1,h.scrollHeight-innerHeight)));
+ let bf=0,all=0;for(let i=0;i<D.n;i++){const l=L[i]||av;all+=l;if(i<cur)bf+=l}return[Math.min(T,Math.floor((bf+sf*(L[cur]||av))/all*T)+1),T]}
+function prog(){if(!D||!cb)return;const[p,T]=pg(),t=D.toc.filter(x=>x.i<=cur).pop(),h=document.documentElement;$('#bar').style.width=p/T*100+'%';$('#ttl').textContent=`p. ${p} / ${T}${t?' · '+t.t:''}`;
+ clearTimeout(sv);sv=setTimeout(()=>{cb.pos={i:cur,f:scrollY/Math.max(1,h.scrollHeight-innerHeight)};cb.pgn=p;if(!cb.pages)cb.pages=T;saveB(cb)},700)}
+async function gp(n){if(D.render)return show(n-1);const T=pageTotal(),L=D.len,k=L.filter(x=>x),av=k.reduce((a,b)=>a+b,0)/(k.length||1)||1;let all=0;for(let i=0;i<D.n;i++)all+=L[i]||av;
+ let t=(n-1)/T*all,i=0;while(i<D.n-1&&t>=(L[i]||av)){t-=L[i]||av;i++}await show(i);const h=document.documentElement;scrollTo({top:t/(L[i]||av)*(h.scrollHeight-innerHeight),behavior:'instant'})}
+function turn(d){if(D.render&&S.vm>0)return d>0?nxt():prv();const h=document.documentElement;
+ if(d>0)scrollY+innerHeight>=h.scrollHeight-4?nxt():scrollBy({top:innerHeight*.85,behavior:'smooth'});
+ else scrollY<=4?cur>0&&show(cur-1).then(()=>scrollTo({top:1e9,behavior:'instant'})):scrollBy({top:-innerHeight*.85,behavior:'smooth'})}
 addEventListener('scroll',prog);
 function burst(msg){const t=$('#toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1400);
  for(let i=0;i<16;i++){const s=document.createElement('span');s.className='pop';s.textContent='📚✨🎉🔥⭐'.match(/./gu)[i%5];
   s.style.setProperty('--x',(Math.random()*300-150)+'px');s.style.setProperty('--r',(Math.random()*360-180)+'deg');s.style.left=(30+Math.random()*40)+'%';
   document.body.append(s);setTimeout(()=>s.remove(),1200)}}
-async function show(i){cur=i;paras=D.cache[i]||await D.get(i);await draw();scrollTo(0,0);$('#t').scrollLeft=0;prog();
- const t=D.toc.filter(x=>x.i<=cur).pop();$('#ttl').textContent=`${D.render?'Page':'Section'} ${cur+1}/${D.n}${t?' · '+t.t:''}`;toc.style.display='none';try{localStorage['pos:'+name]=i}catch(e){}}
+async function show(i){cur=i;paras=D.cache[i]||await D.get(i);await draw();scrollTo({top:0,behavior:'instant'});$('#t').scrollLeft=0;toc.style.display='none';prog()}
 const prv=()=>cur>0&&show(cur-1);
 function nxt(){const w=paras.join(' ').split(/\s+/).length,td=new Date().toDateString();
  if(P.last!==td){P.streak=P.last===new Date(Date.now()-864e5).toDateString()?P.streak+1:1;P.last=td}
- const last=cur+1>=D.n,g=10+Math.round(w/20)+(last?100:0);P.xp+=g;save();hud();
+ const last=cur+1>=D.n,g=10+Math.round(w/20)+(last?100:0);P.xp+=g;save();hud();if(last&&cb){cb.shelf='read';cb.pgn=pageTotal();saveB(cb)}
  burst(last?`🏆 Book finished! +${g} XP`:`+${g} XP · section done!`);if(!last)show(cur+1)}
 // ponytail: pdf.js runs on main thread (worker script loaded via a script tag; CSP blocks cross-origin Worker). Fine for phones/normal books.
 const reflow=s=>s.replace(/-\n/g,'').replace(/([.!?:”"'])\s*\n/g,'$1\n\n').replace(/(?<!\n)\n(?!\n)/g,' ').split(/\n\n+/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
 async function openPDF(buf){const d=await pdfjsLib.getDocument({data:buf}).promise,toc=[];
  const ol=async(items,l)=>{for(const o of items){try{const x=typeof o.dest=='string'?await d.getDestination(o.dest):o.dest;if(x)toc.push({t:o.title.trim(),i:await d.getPageIndex(x[0]),l})}catch(e){}await ol(o.items||[],l+1)}};
  try{await ol(await d.getOutline()||[],0)}catch(e){}
- return{n:d.numPages,toc,cache:{},
+ const m=await d.getMetadata().then(x=>x.info||{}).catch(()=>({}));
+ return{n:d.numPages,toc,meta:{title:m.Title,author:m.Author},cache:{},
   get:async i=>{const tc=await(await d.getPage(i+1)).getTextContent();let s='';for(const it of tc.items)s+=it.str+(it.hasEOL?'\n':' ');return reflow(s).map(x=>`<p>${esc(x)}</p>`)},
   layout:async(i,w)=>{const pg=await d.getPage(i+1),v=pg.getViewport({scale:w/pg.getViewport({scale:1}).width}),c=document.createElement('div');
    c.className='tl';c.style.cssText=`position:relative;width:${v.width}px;height:${v.height}px`;
@@ -122,29 +147,67 @@ async function openEPUB(buf){const z=await JSZip.loadAsync(buf),rd=p=>z.file(p).
  let toc=[];try{if(nv){const np=man[nv.getAttribute('id')],h=hx(await rd(np));
    toc=[...(h.querySelector('nav[epub\\:type=toc]')||h.querySelector('nav')).querySelectorAll('a')].map(a=>({t:a.textContent.trim(),i:ix(np,a.getAttribute('href')),l:lv(a,'ol')}))}
   else if(nx){toc=[...px(await rd(nx)).querySelectorAll('navPoint')].map(p=>{const c=p.querySelector('content');return{t:p.querySelector('navLabel').textContent.trim(),i:ix(nx,c.getAttribute('src')),l:lv(c,'navPoint')}})}}catch(e){}
+ const len=[],measure=async()=>{for(let i=0;i<sp.length;i++){if(!len[i])len[i]=(await rd(sp[i])).replace(/<[^>]*>/g,'').length;await new Promise(r=>setTimeout(r))}};
  const mt={jpg:'jpeg',svg:'svg+xml'},q='h1,h2,h3,h4,p,li,blockquote,table,img,pre';
- return{n:sp.length,toc:toc.filter(x=>x.i>=0&&x.t),cache:{},get:async i=>{const h=hx(await rd(sp[i]));
+ return{n:sp.length,len,measure,meta:{title:opf.querySelector('title')?.textContent.trim(),author:opf.querySelector('creator')?.textContent.trim()},toc:toc.filter(x=>x.i>=0&&x.t),cache:{},get:async i=>{const h=hx(await rd(sp[i]));
   h.querySelectorAll('script,style,link,iframe,object,embed').forEach(e=>e.remove());
   for(const im of h.querySelectorAll('img')){try{const p=res(sp[i],im.getAttribute('src')),e=p.split('.').pop().toLowerCase();im.setAttribute('src','data:image/'+(mt[e]||e)+';base64,'+await z.file(p).async('base64'))}catch(x){im.remove()}}
   h.body.querySelectorAll('*').forEach(e=>[...e.attributes].forEach(a=>!['src','alt','colspan','rowspan'].includes(a.name)&&e.removeAttribute(a.name)));
   return[...h.body.querySelectorAll(q)].filter(e=>!e.parentElement.closest(q)&&(e.textContent.trim()||e.tagName=='IMG'||e.querySelector('img'))).map(e=>e.tagName=='LI'?'<ul>'+e.outerHTML+'</ul>':e.outerHTML)}}}
-$('#f').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('#err').textContent='Opening…';
- try{const buf=await f.arrayBuffer();name=f.name;D=/\.epub$/i.test(f.name)?await openEPUB(buf):await openPDF(buf);
-  $('#toc').innerHTML='<div style="display:flex;gap:6px;padding:4px"><input id="gp" type="number" min="1" max="'+D.n+'" placeholder="Go to page (1-'+D.n+')" style="flex:1;min-width:0;padding:8px;border-radius:10px;border:1px solid var(--mut);background:var(--bg);color:var(--fg)"><button id="gg">Go</button></div>'+D.toc.map(x=>`<button style="padding-left:${8+x.l*14}px" data-i="${x.i}">${esc(x.t)}</button>`).join('')||'<p style="padding:8px;color:var(--mut)">No contents found in this book.</p>';
-  $('#toc').onclick=e=>{if(e.target.dataset.i)show(+e.target.dataset.i);if(e.target.id=='gg'){const n=Math.round(+$('#gp').value);if(n>=1&&n<=D.n)show(n-1)}};
-  $('#vmb').hidden=!D.render;$('#bb').hidden=false;
-  $('#home').hidden=true;$('#rd').hidden=false;let p=0;try{p=+localStorage['pos:'+name]||0}catch(x){}await show(Math.min(p,D.n-1))}
- catch(x){$('#err').textContent='Could not open that file: '+x.message}};
+// ---- library (IndexedDB, private to this browser) ----
+const idb=new Promise((ok,no)=>{try{const q=indexedDB.open('bionic',1);q.onupgradeneeded=()=>{q.result.createObjectStore('m',{keyPath:'id'});q.result.createObjectStore('f')};q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)}catch(e){no(e)}});
+async function dbp(st,m,f){try{const d=await idb;return await new Promise((ok,no)=>{const r=f(d.transaction(st,m).objectStore(st));r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}catch(e){return null}}
+const saveB=b=>dbp('m','readwrite',s=>s.put(b)),gid=()=>Math.random().toString(36).slice(2,10);
+function renderLib(){const sh=tab=='all'?lib:lib.filter(b=>b.shelf==tab);
+ $('#tabs').innerHTML=[['all','All'],['reading','Reading'],['want','Want to read'],['read','Read']].map(([k,l])=>`<button class="${k==tab?'':'g'}" data-t="${k}">${l} ${k=='all'?lib.length:lib.filter(b=>b.shelf==k).length}</button>`).join('');
+ $('#grid').innerHTML=sh.map(b=>{const h=[...b.title].reduce((a,c)=>a*31+c.charCodeAt(0)|0,7)%360,p=b.pages&&b.pgn?Math.min(100,b.pgn/b.pages*100):0;
+  return `<div class="bk" data-id="${b.id}"><div class="cv" style="background:linear-gradient(145deg,hsl(${h} 55% 42%),hsl(${(h+40)%360} 55% 26%))">${esc(b.title)}<small>${esc(b.author||'')}</small></div><div class="pb"><i style="width:${p}%"></i></div><small>${b.pgn?'p. '+b.pgn+(b.pages?' / '+b.pages:''):b.pages?b.pages+' pages':''}${b.hasFile?'':' · no file'}</small><button class="g ed">⋯</button></div>`}).join('')||'<p style="grid-column:1/-1;color:var(--mut)">Nothing here yet. Add a book or import your Goodreads CSV.</p>'}
+async function addFile(f,b){const buf=await f.arrayBuffer(),ep=/\.epub$/i.test(f.name),d=ep?await openEPUB(buf):await openPDF(buf);
+ b=b||{id:gid(),title:d.meta.title||f.name.replace(/\.\w+$/,''),author:d.meta.author||'',shelf:'reading',added:Date.now(),rating:0,pgn:0};
+ b.type=ep?'epub':'pdf';b.hasFile=1;if(!ep)b.pages=d.n;await dbp('f','readwrite',s=>s.put(f,b.id));if(!lib.includes(b))lib.unshift(b);await saveB(b);return b}
+async function openBook(b){const f=await dbp('f','readonly',s=>s.get(b.id));if(!f)return edit(b.id);$('#err').textContent='Opening…';
+ try{const buf=await f.arrayBuffer();D=b.type=='epub'?await openEPUB(buf):await openPDF(buf);cb=b;
+  if(D.len){D.len.push(...(b.lens||[]));D.measure().then(()=>{b.lens=[...D.len];if(!b.pages)b.pages=pageTotal();saveB(b)})}
+  if(b.shelf=='want')b.shelf='reading';
+  $('#toc').innerHTML='<div style="display:flex;gap:6px;padding:4px"><input id="gp" type="number" min="1" max="'+pageTotal()+'" placeholder="Go to page (1-'+pageTotal()+')" style="flex:1;min-width:0"><button id="gg">Go</button></div>'+D.toc.map(x=>`<button style="padding-left:${8+x.l*14}px" data-i="${x.i}">${esc(x.t)}</button>`).join('');
+  $('#toc').onclick=e=>{if(e.target.dataset.i)show(+e.target.dataset.i);if(e.target.id=='gg'){const n=Math.round(+$('#gp').value);if(n>=1&&n<=pageTotal())gp(n)}};
+  $('#vmb').hidden=!D.render;$('#home').hidden=true;$('#rd').hidden=false;$('#bb').hidden=false;$('#err').textContent='';
+  await show(b.pos?.i||0);if(b.pos?.f){const h=document.documentElement;scrollTo({top:b.pos.f*(h.scrollHeight-innerHeight),behavior:'instant'})}saveB(b)}
+ catch(x){$('#err').textContent='Could not open that file: '+x.message}}
+function goHome(){if(cb)saveB(cb);D=cb=null;$('#rd').hidden=$('#bb').hidden=true;$('#home').hidden=false;$('#ttl').textContent='📖 Bionic';$('#bar').style.width=0;renderLib()}
+function edit(id){const b=lib.find(x=>x.id==id),e=$('#ed'),F=(k,l,t='text')=>`<label>${l}</label><input data-k="${k}" type="${t}" value="${esc(String(b[k]??''))}">`;e.hidden=false;
+ e.innerHTML=`<h3 style="margin:0">${esc(b.title)}</h3>${F('title','Title')}${F('author','Author')}${F('pages','Pages','number')}${F('isbn','ISBN')}<label>Shelf</label><select data-k="shelf">${[['want','Want to read'],['reading','Reading'],['read','Read']].map(([k,l])=>`<option value="${k}"${b.shelf==k?' selected':''}>${l}</option>`).join('')}</select><label>Rating (0-5)</label><select data-k="rating">${[0,1,2,3,4,5].map(n=>`<option${b.rating==n?' selected':''}>${n}</option>`).join('')}</select>
+ <p><a href="https://www.goodreads.com/search?q=${encodeURIComponent(b.isbn||b.title+' '+(b.author||''))}" target="_blank" rel="noopener noreferrer">Find on Goodreads ↗</a></p>
+ <label class="btn g">${b.hasFile?'Replace file':'Attach PDF/EPUB'}<input type="file" id="af" accept=".pdf,.epub" hidden></label> <button class="g" id="del">Delete</button> <button id="cl">Done</button>`;
+ e.onchange=async ev=>{const t=ev.target;if(t.dataset.k){b[t.dataset.k]=['pages','rating'].includes(t.dataset.k)?+t.value||0:t.value;await saveB(b);renderLib()}if(t.id=='af'&&t.files[0]){await addFile(t.files[0],b);renderLib();edit(id)}};
+ $('#cl').onclick=()=>e.hidden=true;
+ $('#del').onclick=async ev=>{if(!ev.target.dataset.s){ev.target.dataset.s=1;ev.target.textContent='Tap again to delete';return}await dbp('m','readwrite',s=>s.delete(id));await dbp('f','readwrite',s=>s.delete(id));lib=lib.filter(x=>x!=b);e.hidden=true;renderLib()}}
+$('#grid').onclick=e=>{const k=e.target.closest('.bk');if(k)e.target.classList.contains('ed')?edit(k.dataset.id):openBook(lib.find(x=>x.id==k.dataset.id))};
+$('#tabs').onclick=e=>{if(e.target.dataset.t){tab=e.target.dataset.t;renderLib()}};
+$('#f').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;$('#err').textContent='Adding…';try{openBook(await addFile(f))}catch(x){$('#err').textContent='Could not read that file: '+x.message}};
+$('#ahb').onclick=async()=>{const t=$('#aht').value.trim();if(!t)return;const b={id:gid(),title:t,author:$('#aha').value.trim(),pages:+$('#ahp').value||0,shelf:$('#ahs').value,added:Date.now(),rating:0,pgn:0};lib.unshift(b);await saveB(b);tab=b.shelf;renderLib();['aht','aha','ahp'].forEach(i=>$('#'+i).value='')};
+// Goodreads: CSV in/out (no public API)
+function csv(t){const R=[];let r=[],f='',q=0;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=0}else f+=c}else if(c=='"')q=1;else if(c==','){r.push(f);f=''}else if(c=='\n'||c=='\r'){if(c=='\r'&&t[i+1]=='\n')i++;r.push(f);R.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);R.push(r)}return R}
+console.assert(JSON.stringify(csv('a,"b,""x""",c\n1,2,3'))=='[["a","b,\\"x\\"","c"],["1","2","3"]]','csv broke');
+$('#gi').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const R=csv(await f.text()),H=R.shift().map(h=>h.trim()),c=n=>H.indexOf(n);let n=0;
+ for(const r of R){const t=(r[c('Title')]||'').trim(),a=(r[c('Author')]||'').trim();if(!t||lib.some(b=>b.title.toLowerCase()==t.toLowerCase()&&(b.author||'').toLowerCase()==a.toLowerCase()))continue;
+  const b={id:gid(),title:t,author:a,isbn:(r[c('ISBN13')]||r[c('ISBN')]||'').replace(/[="]/g,''),rating:+r[c('My Rating')]||0,pages:+r[c('Number of Pages')]||0,shelf:{'currently-reading':'reading',read:'read'}[r[c('Exclusive Shelf')]]||'want',added:Date.now()-n,pgn:0};b.pgn=b.shelf=='read'?b.pages:0;lib.push(b);await saveB(b);n++}
+ $('#err').textContent=`Imported ${n} new book${n==1?'':'s'} from Goodreads.`;renderLib()};
+$('#gx').onclick=()=>{const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',t=[['Title','Author','ISBN13','My Rating','Number of Pages','Exclusive Shelf'],...lib.map(b=>[b.title,b.author,b.isbn,b.rating||0,b.pages||'',{reading:'currently-reading',want:'to-read',read:'read'}[b.shelf]])].map(r=>r.map(q).join(',')).join('\n'),e=$('#ed');e.hidden=false;
+ e.innerHTML=`<h3 style="margin:0">Export for Goodreads</h3><p style="color:var(--mut)">Copy this text, save it as a .csv file, then upload it at Goodreads' import page.</p><textarea id="ct" rows="8" style="font-size:13px">${esc(t)}</textarea><p><button id="cp">Copy</button> <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener noreferrer">Open Goodreads import ↗</a> <button class="g" id="cl">Close</button></p>`;
+ $('#cl').onclick=()=>e.hidden=true;$('#cp').onclick=async()=>{try{await navigator.clipboard.writeText(t);$('#cp').textContent='Copied'}catch(x){$('#ct').select()}}};
+(async()=>{lib=(await dbp('m','readonly',s=>s.getAll()))||[];lib.sort((a,b)=>b.added-a.added);if(lib.some(b=>b.shelf=='reading'))tab='reading';renderLib()})();
 // phone controls: zoom buttons, pinch, double-tap, swipe
 const zm=k=>{if(D.render&&S.vm>0)S.z=Math.min(4,Math.max(.6,+(S.z*k).toFixed(2)));else{S.size=Math.min(40,Math.max(14,Math.round(S.size*k)));$('#size').value=S.size}save();redraw()};
-$('#zi').onclick=()=>zm(1.25);$('#zo').onclick=()=>zm(.8);$('#zl').onclick=()=>{S.z=1;S.size=19;$('#size').value=19;save();redraw()};$('#bp').onclick=prv;$('#bn').onclick=nxt;
+$('#zi').onclick=()=>zm(1.25);$('#zo').onclick=()=>zm(.8);$('#zl').onclick=()=>{S.z=1;S.size=19;$('#size').value=19;save();redraw()};$('#bp').onclick=()=>turn(-1);$('#bn').onclick=()=>turn(1);
 $('#vmb').onclick=e=>{if(e.target.dataset.v){S.vm=+e.target.dataset.v;save();redraw()}};
 {const a=$('#t'),dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);let pd=0,pz=1,t0,lt=0,pinch=0;
  a.ontouchstart=e=>{if(e.touches.length==2){pd=dist(e.touches);pinch=1;pz=1}else if(e.touches.length==1&&!pinch)t0={x:e.touches[0].clientX,y:e.touches[0].clientY}};
  a.ontouchmove=e=>{if(e.touches.length==2&&pd){pz=dist(e.touches)/pd;a.style.transformOrigin='50% 0';a.style.transform=`scale(${pz})`}};
  a.ontouchend=e=>{if(e.touches.length)return;if(pinch){pinch=0;pd=0;a.style.transform='';if(Math.abs(pz-1)>.05)zm(pz);return}
   const c=e.changedTouches[0],dx=c.clientX-t0.x,dy=c.clientY-t0.y;
-  if(Math.abs(dx)<10&&Math.abs(dy)<10){const n=Date.now();if(n-lt<300&&D.render&&S.vm>0){S.z=S.z>1.05?1:2;save();redraw()}lt=n;return}
-  if(Math.abs(dx)>70&&Math.abs(dy)<45&&(!(D.render&&S.vm>0)||S.z<=1.05))dx<0?nxt():prv()}}
+  if(Math.abs(dx)<10&&Math.abs(dy)<10){const n=Date.now();if(n-lt<300&&D.render&&S.vm>0){S.z=S.z>1.05?1:2;save();redraw()}if(!(D.render&&S.vm>0)&&!e.target.closest('a,button')){const x=c.clientX/innerWidth;if(x<.3)turn(-1);else if(x>.7)turn(1)}lt=n;return}
+  if(Math.abs(dx)>70&&Math.abs(dy)<45&&(!(D.render&&S.vm>0)||S.z<=1.05))turn(dx<0?1:-1)}}
 </script></body></html>
+
 
